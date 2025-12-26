@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 // Common Components
 import Navbar from './components/common/Navbar';
+import Footer from './components/common/Footer'; 
 
 // Pages
 import Home from './pages/Home';
@@ -52,6 +53,7 @@ function App() {
             } />
           </Routes>
         </main>
+        <Footer />
       </div>
     </Router>
   );
