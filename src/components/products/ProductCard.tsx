@@ -1,73 +1,84 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { ShoppingBag, Star } from 'lucide-react';
-import type{ Product } from '../../types';
-import { useCartStore } from '../../store/cartStore';
-import toast from 'react-hot-toast';
+import { ShoppingCart, Eye } from 'lucide-react';
+import type { Product } from '../../types/types';
+import Button from '../ui/Button';
 
 interface ProductCardProps {
   product: Product;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const { addItem } = useCartStore();
+  // ඔබේ Backend එක දුවන URL එක මෙහි සඳහන් කරන්න
+  const BACKEND_URL = 'http://localhost:5000';
+  
+  // පින්තූරය load නොවන්නේ නම් පෙන්වන placeholder එක
+  const fallbackImage = "https://images.unsplash.com/photo-1560393464-5c69a73c5770?q=80&w=400&auto=format&fit=crop";
 
-  const handleAddToCart = () => {
-    addItem(product, 1);
-    toast.success('Added to cart!');
-  };
+  // Image URL එක නිවැරදිව සැකසීම
+  const imageUrl = product.image 
+    ? (product.image.startsWith('http') ? product.image : `${BACKEND_URL}/${product.image}`)
+    : fallbackImage;
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
-      <Link to={`/products/${product._id}`}>
-        <div className="h-48 overflow-hidden">
-          <img
-            src={product.image || 'https://via.placeholder.com/300x200'}
-            alt={product.name}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-          />
-        </div>
-      </Link>
-
-      <div className="p-4">
-        <Link to={`/products/${product._id}`}>
-          <h3 className="text-lg font-semibold text-gray-800 hover:text-blue-600 transition">
-            {product.name}
-          </h3>
-        </Link>
+    <div className="group bg-white rounded-3xl border border-gray-100 overflow-hidden hover:shadow-2xl hover:shadow-blue-100 transition-all duration-300 flex flex-col h-full">
+      
+      {/* Product Image Section */}
+      <div className="relative h-64 overflow-hidden bg-gray-50">
+        <img
+          src={imageUrl}
+          alt={product.name}
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.onerror = null; 
+            target.src = fallbackImage;
+          }}
+        />
         
-        <p className="text-gray-600 text-sm mt-2 line-clamp-2">
+        {/* Hover Actions */}
+        <div className="absolute top-4 right-4 flex flex-col gap-2 translate-x-12 group-hover:translate-x-0 transition-transform duration-300">
+          <button className="p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white text-gray-700 transition-colors">
+            <Eye size={20} />
+          </button>
+        </div>
+
+        {/* Category Badge */}
+        <div className="absolute bottom-4 left-4">
+          <span className="px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-bold text-blue-600 shadow-sm uppercase">
+            {product.category}
+          </span>
+        </div>
+      </div>
+
+      {/* Product Details Section */}
+      <div className="p-5 flex flex-col flex-grow">
+        <h3 className="text-lg font-bold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors line-clamp-1">
+          {product.name}
+        </h3>
+        <p className="text-gray-500 text-sm mb-4 line-clamp-2 flex-grow">
           {product.description}
         </p>
-
-        <div className="flex items-center justify-between mt-4">
+        
+        <div className="flex items-center justify-between mt-auto">
           <div>
-            <span className="text-2xl font-bold text-gray-900">
+            <span className="text-xs text-gray-400 block mb-1 font-medium tracking-wider uppercase">Price</span>
+            <span className="text-2xl font-black text-blue-600">
               ${product.price.toFixed(2)}
             </span>
-            {product.stock < 10 && product.stock > 0 && (
-              <p className="text-sm text-orange-600">Only {product.stock} left!</p>
-            )}
           </div>
-
-          <div className="flex items-center">
-            <Star className="h-4 w-4 text-yellow-400 fill-current" />
-            <span className="ml-1 text-gray-600">4.5</span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between mt-4">
-          <span className="text-sm text-gray-500">
-            Seller: {product.seller.name}
-          </span>
-          <button
-            onClick={handleAddToCart}
-            disabled={product.stock === 0}
-            className="flex items-center space-x-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          
+          <Button 
+            variant="primary" 
+            size="sm" 
+            icon={ShoppingCart} 
+            className="rounded-2xl px-4"
+            onClick={() => {
+              // Cart එකට එකතු කරන function එක පසුව මෙතැනට එක් කළ හැක
+              console.log(`${product.name} added to cart`);
+            }}
           >
-            <ShoppingBag className="h-4 w-4" />
-            <span>{product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}</span>
-          </button>
+            Add
+          </Button>
         </div>
       </div>
     </div>

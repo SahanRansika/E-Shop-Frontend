@@ -1,6 +1,5 @@
 {
   "name": "e-shop-frontend",
-<<<<<<< HEAD
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -22,46 +21,19 @@
     "zustand": "^4.4.7"
   },
   "devDependencies": {
-    "@tailwindcss/aspect-ratio": "^0.4.2",
-    "@tailwindcss/forms": "^0.5.11",
-    "@tailwindcss/typography": "^0.5.19",
+    "@types/node": "^25.0.3",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@typescript-eslint/eslint-plugin": "^6.14.0",
     "@typescript-eslint/parser": "^6.14.0",
     "@vitejs/plugin-react": "^4.2.1",
-    "autoprefixer": "^10.4.23",
+    "autoprefixer": "^10.4.16",
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
-    "install": "^0.13.0",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.19",
-    "typescript": "^5.2.2",
-    "vite": "^7.3.0"
-=======
-  "version": "1.0.0",
-  "private": true,
-  "dependencies": {
-    "@vitejs/plugin-react": "^5.1.2",
-    "axios": "^1.7.2",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.22.0"
-  },
-  "devDependencies": {
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "autoprefixer": "^10.4.16",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.0",
+    "typescript": "^5.2.2",
     "vite": "^7.3.0"
-  },
-  "scripts": {
-    "dev": "vite",
-    "start": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
->>>>>>> 4cac796a2afc05a3e123a1bf9a0774f155242682
   }
 }

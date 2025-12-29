@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Star, Truck, Shield, RotateCcw, Package, Heart, Share2 } from 'lucide-react';
-import type{ Product } from '../types';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Star, Truck, Shield, RotateCcw, Package, Heart, Plus, Minus, Check, BadgeCheck, ArrowLeft } from 'lucide-react';
+import type { Product } from '../types/types';
 import { productService } from '../services/productService';
 import { useCartStore } from '../store/cartStore';
 import Spinner from '../components/ui/Spinner';
@@ -10,16 +10,15 @@ import toast from 'react-hot-toast';
 
 const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
-  const [selectedImage, setSelectedImage] = useState(0);
   const { addItem } = useCartStore();
 
   useEffect(() => {
-    if (id) {
-      fetchProduct();
-    }
+    if (id) fetchProduct();
+    window.scrollTo(0, 0);
   }, [id]);
 
   const fetchProduct = async () => {
@@ -28,247 +27,190 @@ const ProductDetail: React.FC = () => {
       const data = await productService.getById(id!);
       setProduct(data);
     } catch (error) {
-      toast.error('Failed to load product');
-      console.error(error);
+      console.error('Error fetching product:', error);
+      toast.error('භාණ්ඩයේ තොරතුරු ලබා ගැනීමට නොහැකි විය.');
     } finally {
       setLoading(false);
     }
   };
-
+  
   const handleAddToCart = () => {
     if (product) {
       addItem(product, quantity);
-      toast.success('Added to cart!');
+      toast.success(`${product.name} කාර්ට් එකට එක් කළා!`, {
+        icon: '🛒',
+        style: { borderRadius: '12px', background: '#333', color: '#fff' },
+      });
     }
   };
 
   const handleBuyNow = () => {
     if (product) {
       addItem(product, quantity);
-      // Redirect to checkout
-      window.location.href = '/checkout';
+      navigate('/checkout');
     }
   };
 
-  const increaseQuantity = () => {
-    if (product && quantity < product.stock) {
-      setQuantity(quantity + 1);
-    }
-  };
+  if (loading) return (
+    <div className="flex flex-col justify-center items-center h-[70vh] space-y-4">
+      <Spinner size="lg" />
+      <p className="text-gray-400 animate-pulse font-medium">Fetching product details...</p>
+    </div>
+  );
 
-  const decreaseQuantity = () => {
-    if (quantity > 1) {
-      setQuantity(quantity - 1);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-96">
-        <Spinner size="lg" />
+  if (!product) return (
+    <div className="text-center py-24 px-4">
+      <div className="bg-gray-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
+        <Package className="h-12 w-12 text-gray-300" />
       </div>
-    );
-  }
-
-  if (!product) {
-    return (
-      <div className="text-center py-12">
-        <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Product Not Found</h2>
-        <p className="text-gray-600 mb-6">The product you're looking for doesn't exist.</p>
-        <Link to="/products" className="btn-primary">
-          Browse Products
-        </Link>
-      </div>
-    );
-  }
-
-  const images = [
-    product.image || 'https://via.placeholder.com/600',
-    'https://via.placeholder.com/600/2',
-    'https://via.placeholder.com/600/3',
-    'https://via.placeholder.com/600/4',
-  ];
-
-  const features = [
-    { icon: <Truck className="h-5 w-5" />, text: 'Free shipping on orders over $50' },
-    { icon: <Shield className="h-5 w-5" />, text: '2-year warranty' },
-    { icon: <RotateCcw className="h-5 w-5" />, text: '30-day return policy' },
-  ];
+      <h2 className="text-3xl font-bold text-gray-900 mb-2">භාණ්ඩය සොයාගත නොහැක</h2>
+      <Link to="/products" className="inline-flex items-center text-blue-600 font-bold hover:underline">
+        <ArrowLeft className="w-4 h-4 mr-2" /> Back to Products
+      </Link>
+    </div>
+  );
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Breadcrumb */}
-      <nav className="text-sm text-gray-500 mb-8">
-        <Link to="/" className="hover:text-blue-600">Home</Link>
-        <span className="mx-2">/</span>
-        <Link to="/products" className="hover:text-blue-600">Products</Link>
-        <span className="mx-2">/</span>
-        <span className="text-gray-800">{product.name}</span>
+      <nav className="flex items-center space-x-2 text-sm font-medium text-gray-400 mb-8">
+        <Link to="/" className="hover:text-blue-600 transition-colors">Home</Link>
+        <span>/</span>
+        <Link to="/products" className="hover:text-blue-600 transition-colors">Products</Link>
+        <span>/</span>
+        <span className="text-gray-900 truncate">{product.name}</span>
       </nav>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-        {/* Product Images */}
-        <div>
-          <div className="mb-4">
-            <img
-              src={images[selectedImage]}
-              alt={product.name}
-              className="w-full h-96 object-cover rounded-lg"
-            />
-          </div>
-          
-          <div className="flex space-x-2">
-            {images.map((img, index) => (
-              <button
-                key={index}
-                onClick={() => setSelectedImage(index)}
-                className={`h-20 w-20 rounded-lg overflow-hidden border-2 transition ${
-                  selectedImage === index 
-                    ? 'border-blue-600' 
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <img
-                  src={img}
-                  alt={`${product.name} ${index + 1}`}
-                  className="h-full w-full object-cover"
-                />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+        
+        {/* --- LEFT: PRODUCT IMAGE --- */}
+        <div className="lg:col-span-6">
+          <div className="sticky top-28">
+            <div className="relative aspect-square bg-gray-50 rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-sm group">
+              <img
+                src={product.image || 'https://via.placeholder.com/600'}
+                alt={product.name}
+                className="w-full h-full object-contain p-8 group-hover:scale-105 transition-transform duration-500"
+              />
+              <button className="absolute top-6 right-6 p-3 bg-white/80 backdrop-blur-md rounded-full shadow-sm hover:bg-white transition-colors">
+                <Heart className="h-6 w-6 text-gray-400 hover:text-red-500" />
               </button>
-            ))}
-          </div>
-
-          {/* Actions */}
-          <div className="flex space-x-4 mt-6">
-            <Button variant="ghost" icon={Heart}>
-              Add to Wishlist
-            </Button>
-            <Button variant="ghost" icon={Share2}>
-              Share
-            </Button>
+            </div>
           </div>
         </div>
 
-        {/* Product Info */}
-        <div>
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">
-              {product.name}
-            </h1>
-            
-            <div className="flex items-center space-x-2 mb-4">
-              <div className="flex">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    className="h-5 w-5 text-yellow-400 fill-current"
-                  />
-                ))}
-              </div>
-              <span className="text-gray-600">(4.5) • 128 reviews</span>
-            </div>
-
-            <p className="text-3xl font-bold text-blue-600 mb-6">
-              ${product.price.toFixed(2)}
-              <span className="text-sm text-gray-500 font-normal ml-2">
-                {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
-              </span>
-            </p>
-
-            <p className="text-gray-700 mb-8">
-              {product.description}
-            </p>
-          </div>
-
-          {/* Features */}
-          <div className="space-y-3 mb-8">
-            {features.map((feature, index) => (
-              <div key={index} className="flex items-center">
-                <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3">
-                  {feature.icon}
-                </div>
-                <span className="text-gray-700">{feature.text}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Seller Info */}
-          <div className="border-t border-b py-6 mb-8">
-            <p className="text-gray-600 mb-2">Sold by</p>
-            <div className="flex items-center">
-              <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                <span className="font-semibold text-gray-700">
-                  {product.seller.name.charAt(0)}
-                </span>
-              </div>
-              <div>
-                <p className="font-medium text-gray-800">{product.seller.name}</p>
-                <p className="text-sm text-gray-500">⭐ 4.8 Seller Rating</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Quantity & Actions */}
-          <div className="space-y-6">
+        {/* --- RIGHT: PRODUCT INFO --- */}
+        <div className="lg:col-span-6">
+          <div className="space-y-8">
+            {/* Header */}
             <div>
-              <p className="text-gray-700 mb-2">Quantity</p>
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center border rounded-lg">
-                  <button
-                    onClick={decreaseQuantity}
-                    disabled={quantity <= 1}
-                    className="h-10 w-10 flex items-center justify-center hover:bg-gray-100 disabled:opacity-50"
-                  >
-                    -
-                  </button>
-                  <span className="h-10 w-16 text-center flex items-center justify-center">
-                    {quantity}
-                  </span>
-                  <button
-                    onClick={increaseQuantity}
-                    disabled={!product || quantity >= product.stock}
-                    className="h-10 w-10 flex items-center justify-center hover:bg-gray-100 disabled:opacity-50"
-                  >
-                    +
-                  </button>
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
+                <BadgeCheck className="h-4 w-4" /> Verified Seller
+              </div>
+              <h1 className="text-4xl font-extrabold text-gray-900 leading-tight mb-4">{product.name}</h1>
+              <div className="flex items-center gap-4">
+                <div className="flex text-yellow-400">
+                  {[...Array(5)].map((_, i) => <Star key={i} className={`h-5 w-5 ${i < 4 ? 'fill-current' : 'text-gray-200'}`} />)}
                 </div>
-                <span className="text-gray-600">
-                  {product.stock} available
-                </span>
+                <span className="text-sm font-bold text-gray-400">Trusted Product</span>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button
-                onClick={handleAddToCart}
-                size="lg"
-                fullWidth
+            {/* Price & Stock */}
+            <div className="flex items-end gap-3">
+              <span className="text-5xl font-black text-gray-900">${product.price.toFixed(2)}</span>
+              <div className="mb-1.5">
+                {product.stock > 0 ? (
+                  <span className="flex items-center text-emerald-600 font-bold text-sm bg-emerald-50 px-3 py-1 rounded-full">
+                    <Check className="h-4 w-4 mr-1" /> In Stock
+                  </span>
+                ) : (
+                  <span className="text-red-500 font-bold text-sm bg-red-50 px-3 py-1 rounded-full">Out of Stock</span>
+                )}
+              </div>
+            </div>
+
+            <p className="text-gray-500 leading-relaxed text-lg">{product.description}</p>
+
+            {/* Seller Trust Box */}
+            <div className="p-5 bg-blue-50/50 rounded-3xl border border-blue-100 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                  {product.seller?.name ? product.seller.name.charAt(0) : 'S'}
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-400 uppercase">Sold by</p>
+                  <p className="font-extrabold text-gray-900">{product.seller?.name || 'Unknown Seller'}</p>
+                </div>
+              </div>
+              <button className="text-sm font-bold text-blue-600 hover:underline">View Store</button>
+            </div>
+
+            {/* Quantity Selector */}
+            {product.stock > 0 && (
+              <div className="space-y-4">
+                <label className="text-sm font-bold text-gray-400 uppercase tracking-widest">Quantity</label>
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center bg-gray-100 rounded-2xl p-1">
+                    <button 
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="p-3 hover:bg-white rounded-xl transition-all"
+                      disabled={quantity <= 1}
+                    >
+                      <Minus className="h-5 w-5" />
+                    </button>
+                    <span className="w-12 text-center font-black text-xl">{quantity}</span>
+                    <button 
+                      onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                      className="p-3 hover:bg-white rounded-xl transition-all"
+                      disabled={quantity >= product.stock}
+                    >
+                      <Plus className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <span className="text-sm font-bold text-gray-400">{product.stock} items left</span>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+              <Button 
+                onClick={handleAddToCart} 
+                size="lg" 
+                variant="outline"
+                className="py-5 rounded-2xl border-2 font-bold hover:bg-gray-50 disabled:opacity-50"
                 disabled={product.stock === 0}
               >
                 Add to Cart
               </Button>
-              
-              <Button
-                onClick={handleBuyNow}
+              <Button 
+                onClick={handleBuyNow} 
+                size="lg" 
                 variant="primary"
-                size="lg"
-                fullWidth
+                className="py-5 rounded-2xl font-bold shadow-xl shadow-blue-200 disabled:opacity-50"
                 disabled={product.stock === 0}
               >
                 Buy Now
               </Button>
             </div>
 
-            {product.stock === 0 && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-700 font-medium">
-                  This product is currently out of stock
-                </p>
-                <p className="text-red-600 text-sm mt-1">
-                  You can add it to your wishlist to be notified when it's back in stock.
-                </p>
-              </div>
-            )}
+            {/* Trust Features */}
+            <div className="grid grid-cols-1 gap-3 pt-6">
+              {[
+                { icon: Truck, text: 'Fast Delivery', sub: 'Receive within 3-5 days' },
+                { icon: Shield, text: 'Secure Payment', sub: '100% encrypted checkout' },
+                { icon: RotateCcw, text: 'Easy Returns', sub: '30-day money-back guarantee' }
+              ].map((f, i) => (
+                <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50/50">
+                  <f.icon className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">{f.text}</p>
+                    <p className="text-xs text-gray-400">{f.sub}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

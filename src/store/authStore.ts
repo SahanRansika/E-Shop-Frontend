@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { User } from '../types';
+import type { User } from '../types/types';
 import { authService } from '../services/authService';
 
 interface AuthState {
@@ -10,11 +10,12 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, role?: string) => Promise<void>;
   logout: () => void;
+  // මෙන්න මේ පේළිය එක් කරන්න
+  setAuth: (user: User, token: string) => void; 
   setUser: (user: User) => void;
   clearError: () => void;
 }
 
-// Define a safe error type for axios/fetch responses
 type ApiError = {
   response?: {
     data?: {
@@ -29,10 +30,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: false,
   error: null,
 
+  // setAuth ශ්‍රිතය මෙලෙස ක්‍රියාත්මක කරන්න
+  setAuth: (user: User, token: string) => {
+    localStorage.setItem('accessToken', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    set({ user, isAuthenticated: true });
+  },
+
   login: async (email: string, password: string) => {
     set({ isLoading: true, error: null });
     try {
       const data = await authService.login(email, password);
+      // මෙහිදී setAuth භාවිතා කළ හැක
       localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('refreshToken', data.refreshToken);
       localStorage.setItem('user', JSON.stringify(data.user));

@@ -1,88 +1,90 @@
-import React from 'react';
-import LoginForm from '../components/auth/LoginForm';
-import { Link } from 'react-router-dom';
-import { Shield } from 'lucide-react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore'; 
+import { authService } from '../services/authService';
+import Button from '../components/ui/Button';
+import toast from 'react-hot-toast';
+import { Mail, Lock, Loader2 } from 'lucide-react';
 
-const Login: React.FC = () => {
+const LoginForm: React.FC = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { setAuth } = useAuthStore(); // Auth Store එකෙන් දත්ත Update කිරීම
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const response = await authService.login(email, password);
+      
+      // වැදගත්ම කොටස: Token එක නිවැරදි නමින් Save කිරීම
+      localStorage.setItem('accessToken', response.accessToken); 
+      
+      // Store එක update කිරීම
+      setAuth(response.user, response.accessToken);
+
+      toast.success('සාර්ථකව ඇතුළු වුණා!');
+      
+      // Seller කෙනෙක් නම් Dashboard එකටත්, නැත්නම් Home එකටත් යොමු කිරීම
+      if (response.user.roles.includes('seller')) {
+        navigate('/dashboard');
+      } else {
+        navigate('/');
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Login අසාර්ථකයි. නැවත උත්සාහ කරන්න.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-[80vh] flex items-center justify-center py-12">
-      <div className="w-full max-w-5xl">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Left Side - Form */}
-          <div>
-            <div className="mb-8">
-              <div className="flex items-center space-x-2 mb-4">
-                <Shield className="h-8 w-8 text-blue-600" />
-                <h1 className="text-3xl font-bold text-gray-800">Welcome Back</h1>
-              </div>
-              <p className="text-gray-600">
-                Sign in to your account to continue shopping or manage your store.
-              </p>
-            </div>
-            <LoginForm />
-          </div>
-
-          {/* Right Side - Info */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 lg:p-12">
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                Why Join E-Shop?
-              </h2>
-              <ul className="space-y-4">
-                <li className="flex items-start">
-                  <div className="h-6 w-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 mt-0.5">
-                    <span className="text-sm font-bold">1</span>
-                  </div>
-                  <span className="text-gray-700">
-                    <strong>Secure Shopping:</strong> Your data is protected with bank-level security
-                  </span>
-                </li>
-                <li className="flex items-start">
-                  <div className="h-6 w-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 mt-0.5">
-                    <span className="text-sm font-bold">2</span>
-                  </div>
-                  <span className="text-gray-700">
-                    <strong>Fast Delivery:</strong> Get your orders delivered quickly
-                  </span>
-                </li>
-                <li className="flex items-start">
-                  <div className="h-6 w-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 mt-0.5">
-                    <span className="text-sm font-bold">3</span>
-                  </div>
-                  <span className="text-gray-700">
-                    <strong>Easy Returns:</strong> 30-day hassle-free return policy
-                  </span>
-                </li>
-                <li className="flex items-start">
-                  <div className="h-6 w-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 mt-0.5">
-                    <span className="text-sm font-bold">4</span>
-                  </div>
-                  <span className="text-gray-700">
-                    <strong>24/7 Support:</strong> Our team is always here to help
-                  </span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="border-t pt-8">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                New to E-Shop?
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Create an account to start shopping or selling on our platform.
-              </p>
-              <Link
-                to="/register"
-                className="inline-flex items-center justify-center w-full px-6 py-3 border-2 border-blue-600 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition"
-              >
-                Create Your Account
-              </Link>
-            </div>
-          </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-2">
+        <label className="text-sm font-bold text-gray-700 ml-1">Email Address</label>
+        <div className="relative group">
+          <Mail className="absolute left-4 top-3.5 h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+            placeholder="name@example.com"
+          />
         </div>
       </div>
-    </div>
+
+      <div className="space-y-2">
+        <div className="flex justify-between items-center ml-1">
+          <label className="text-sm font-bold text-gray-700">Password</label>
+          <button type="button" className="text-xs font-bold text-blue-600 hover:underline">Forgot?</button>
+        </div>
+        <div className="relative group">
+          <Lock className="absolute left-4 top-3.5 h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
+          <input
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+            placeholder="••••••••"
+          />
+        </div>
+      </div>
+
+      <Button
+        type="submit"
+        className="w-full py-4 rounded-2xl font-bold text-lg shadow-xl shadow-blue-200"
+        disabled={loading}
+      >
+        {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : 'Sign In'}
+      </Button>
+    </form>
   );
 };
 
-export default Login;
+export default LoginForm;

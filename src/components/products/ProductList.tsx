@@ -1,6 +1,6 @@
 import React from 'react';
 import ProductCard from './ProductCard';
-import type{ Product } from '../../types';
+import type{ Product } from '../../types/types';
 import { Grid, Package } from 'lucide-react';
 
 interface ProductListProps {

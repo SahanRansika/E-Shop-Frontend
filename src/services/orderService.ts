@@ -1,9 +1,6 @@
 import api from './api';
-import type { Order } from '../types';
+import type { Order } from '../types/types';
 
-/**
- * Address type (adjust fields if backend differs)
- */
 export interface OrderAddress {
   fullName: string;
   phone: string;

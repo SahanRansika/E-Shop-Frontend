@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useCartStore } from '../store/cartStore';
 import { cartService } from '../services/cartService';
 import { useAuthStore } from '../store/authStore';
-import type { Product } from '../types'; // <-- adjust path if needed
+import type { Product } from '../types/types'; // <-- adjust path if needed
 
 // Server cart item type
 interface ServerCartItem {
