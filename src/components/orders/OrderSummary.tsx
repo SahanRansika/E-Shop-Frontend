@@ -1,6 +1,6 @@
 import React from 'react';
 import { Package, Truck, User, CreditCard } from 'lucide-react';
-import type{ Order } from '../../types';
+import type{ Order } from '../../types/types';
 import { formatCurrency } from '../../utils/formatters';
 
 interface OrderSummaryProps {

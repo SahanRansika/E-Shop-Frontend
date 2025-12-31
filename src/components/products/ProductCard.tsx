@@ -2,22 +2,40 @@ import React from 'react';
 import { ShoppingCart, Eye } from 'lucide-react';
 import type { Product } from '../../types/types';
 import Button from '../ui/Button';
+import { useCartStore } from '../../store/cartStore';
+import { cartService } from '../../services/cartService';
+import { useAuthStore } from '../../store/authStore';
 
 interface ProductCardProps {
   product: Product;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  // ඔබේ Backend එක දුවන URL එක මෙහි සඳහන් කරන්න
   const BACKEND_URL = 'http://localhost:5000';
-  
-  // පින්තූරය load නොවන්නේ නම් පෙන්වන placeholder එක
   const fallbackImage = "https://images.unsplash.com/photo-1560393464-5c69a73c5770?q=80&w=400&auto=format&fit=crop";
-
-  // Image URL එක නිවැරදිව සැකසීම
   const imageUrl = product.image 
     ? (product.image.startsWith('http') ? product.image : `${BACKEND_URL}/${product.image}`)
     : fallbackImage;
+
+  const { addItem } = useCartStore();
+  const { isAuthenticated } = useAuthStore();
+
+  const handleAddToCart = async () => {
+    try {
+      // 1️⃣ Local cart update
+      addItem(product, 1);
+      console.log('✅ Added to local cart:', useCartStore.getState().items);
+
+      // 2️⃣ Backend sync if logged in
+      if (isAuthenticated) {
+        const res = await cartService.addToCart(product._id, 1);
+        console.log('✅ Added to backend cart:', res);
+      }
+
+    } catch (err) {
+      console.error('❌ Failed to add to cart:', err);
+    }
+  };
 
   return (
     <div className="group bg-white rounded-3xl border border-gray-100 overflow-hidden hover:shadow-2xl hover:shadow-blue-100 transition-all duration-300 flex flex-col h-full">
@@ -72,10 +90,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             size="sm" 
             icon={ShoppingCart} 
             className="rounded-2xl px-4"
-            onClick={() => {
-              // Cart එකට එකතු කරන function එක පසුව මෙතැනට එක් කළ හැක
-              console.log(`${product.name} added to cart`);
-            }}
+            onClick={handleAddToCart}
           >
             Add
           </Button>

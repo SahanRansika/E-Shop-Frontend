@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Minus, Plus, Trash2 } from 'lucide-react';
-import type{ CartItem as CartItemType } from '../../types';
+import type{ CartItem as CartItemType } from '../../types/types';
 import { useCartStore } from '../../store/cartStore';
 
 interface CartItemProps {

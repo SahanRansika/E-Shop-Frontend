@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Package, Calendar, DollarSign, Truck, CheckCircle } from 'lucide-react';
-import type{ Order } from '../../types';
+import type{ Order } from '../../types/types';
 import { formatCurrency } from '../../utils/formatters';
 
 interface OrderCardProps {
