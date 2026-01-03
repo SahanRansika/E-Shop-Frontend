@@ -1,48 +1,47 @@
-import api from './api';
+import axios from 'axios';
 
-export interface InitiatePaymentPayload {
+const API_BASE_URL = 'http://localhost:5000/api/payment';
+
+interface InitiatePaymentRequest {
   orderId: string;
   amount: number;
 }
 
-export interface PaymentData {
+interface InitiatePaymentResponse {
   merchant_id: string;
-  return_url: string;
-  cancel_url: string;
   order_id: string;
-  amount: number;
+  amount: string; // PayHere expects string with 2 decimals
   currency: string;
   hash: string;
-}
-
-export interface VerifyPaymentResponse {
-  paymentId: string;
-  orderId: string;
-  status: 'success' | 'failed' | 'pending';
-  paidAt?: string;
-}
-
-export interface PaymentHistoryItem {
-  _id: string;
-  orderId: string;
-  amount: number;
-  status: 'success' | 'failed' | 'pending';
-  createdAt: string;
+  return_url: string;
+  cancel_url: string;
+  notify_url: string;
 }
 
 export const paymentService = {
-  async initiatePayment(data: InitiatePaymentPayload): Promise<PaymentData> {
-    const response = await api.post<PaymentData>('/payments/initiate', data);
-    return response.data;
-  },
+  initiatePayment: async (
+    data: InitiatePaymentRequest
+  ): Promise<InitiatePaymentResponse> => {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/initiate`,
+        data,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-  async verifyPayment(paymentId: string): Promise<VerifyPaymentResponse> {
-    const response = await api.get<VerifyPaymentResponse>(`/payments/verify/${paymentId}`);
-    return response.data;
-  },
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ initiatePayment error:', error);
 
-  async getPaymentHistory(): Promise<PaymentHistoryItem[]> {
-    const response = await api.get<PaymentHistoryItem[]>('/payments/history');
-    return response.data;
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+
+      throw new Error('Unable to initiate payment');
+    }
   },
 };
