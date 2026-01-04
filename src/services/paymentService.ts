@@ -4,7 +4,8 @@ const API_BASE_URL = 'http://localhost:5000/api/payment';
 
 interface InitiatePaymentRequest {
   orderId: string;
-  amount: number;
+  // මෙතන string | number ලෙස වෙනස් කළා එවිට .toFixed(2) අගය යැවිය හැකියි
+  amount: string | number; 
 }
 
 interface InitiatePaymentResponse {
@@ -29,6 +30,8 @@ export const paymentService = {
         {
           headers: {
             'Content-Type': 'application/json',
+            // Auth token එකක් තිබේ නම් එයද මෙහි ඇතුළත් කරන්න
+            'Authorization': `Bearer ${localStorage.getItem('token')}` 
           },
         }
       );

@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { paymentService } from '../services/paymentService';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { ShoppingBag, MapPin, CreditCard, ChevronRight } from 'lucide-react';
+import { ShoppingBag, MapPin, ChevronRight, Phone, Loader2, Package, Lock } from 'lucide-react';
 
 const Checkout: React.FC = () => {
   const navigate = useNavigate();
@@ -13,74 +13,94 @@ const Checkout: React.FC = () => {
   const { items, clearCart } = useCartStore(); 
   const { user } = useAuthStore();
 
-  // පාරිභෝගිකයාගේ ලිපිනය (Form එකක් හරහා මෙය ලබාගත හැක)
-  const [address, setAddress] = useState({
-    street: "No 1, Main Street",
-    city: "Colombo",
-    zipCode: "10100"
+  const [formData, setFormData] = useState({
+    firstName: user?.name || "",
+    lastName: "",
+    phone: "",
+    street: "",
+    city: "",
+    zipCode: ""
   });
 
-  const calculateTotal = () => {
+  // --- Pricing Calculations ---
+  const calculateSubtotal = () => {
     return items.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
   };
 
-  const handlePayHereCheckout = async () => {
-    // 1. Validation
-    if (!user) {
-      toast.error('Please login to proceed');
-      return;
-    }
-    if (items.length === 0) {
-      toast.error('Your cart is empty');
+  const calculateShipping = () => {
+    const subtotal = calculateSubtotal();
+    // රු. 5000 ට වැඩි නම් Free, නැතිනම් රු. 350
+    return subtotal > 5000 || subtotal === 0 ? 0 : 350;
+  };
+
+  const calculateTotal = () => {
+    return calculateSubtotal() + calculateShipping();
+  };
+
+  const handlePayHereCheckout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.phone || !formData.street || !formData.city) {
+      toast.error('Please enter delivery details');
       return;
     }
 
-    const currentTotal = calculateTotal();
     setIsProcessing(true);
 
     try {
-      // 2. Backend එකේ නව Order එකක් සෑදීම
+      const finalAmount = calculateTotal();
+      // වැදගත්: Backend එකට අංකයක් (Number) ලෙස යවන්න, Backend එක එය .toFixed(2) කරනු ඇත
+      const amountToSend = finalAmount; 
+
+      // 1. Backend Order එක සෑදීම
       const orderResponse = await api.post('/orders', {
-        products: items.map(item => ({
-          product: item.product._id,
-          quantity: item.quantity
+        products: items.map(item => ({ 
+          product: item.product._id, 
+          quantity: item.quantity 
         })),
-        total: currentTotal,
-        address: address 
+        total: amountToSend, 
+        address: { 
+          street: formData.street, 
+          city: formData.city, 
+          phone: formData.phone,
+          zipCode: formData.zipCode 
+        }
       });
 
       const newOrder = orderResponse.data;
 
-      // 3. Backend එකෙන් PayHere Hash එක සහ Credentials ලබා ගැනීම
+      // 2. Hash එක ලබා ගැනීම
+      // Backend එකට මුළු මුදල යවා නිවැරදිව format කළ amount සහ hash එක ලබා ගන්න
       const paymentData = await paymentService.initiatePayment({
         orderId: newOrder._id, 
-        amount: currentTotal,
+        amount: amountToSend, 
       });
 
-      // 4. PayHere Sandbox වෙත යොමු කිරීමට Form එකක් සෑදීම
+      // 3. PayHere Form එක සෑදීම
       const form = document.createElement('form');
       form.method = 'POST';
       form.action = 'https://sandbox.payhere.lk/pay/checkout';
 
       const dataToPost = {
         merchant_id: paymentData.merchant_id,
-        return_url: paymentData.return_url,
-        cancel_url: paymentData.cancel_url,
-        notify_url: paymentData.notify_url,
-        order_id: paymentData.order_id,
-        items: `Order #${newOrder._id}`,
-        currency: paymentData.currency,
+        return_url: `${window.location.origin}/order-success?orderId=${newOrder._id}`,
+        cancel_url: `${window.location.origin}/checkout`,
+        notify_url: "https://55fc2faa80e2.ngrok-free.app/api/payments/notify", 
+        order_id: newOrder._id,
+        items: `Order from ${user?.name || 'Customer'}`,
+        currency: "LKR",
+        // වැදගත්: Backend එකෙන් ලැබුණු formatted amount එකම භාවිතා කරන්න
         amount: paymentData.amount, 
         hash: paymentData.hash,     
-        first_name: user.name || "Customer",
-        last_name: "", 
-        email: user.email || "customer@example.com",
-        address: address.street,
-        city: address.city,
+        first_name: formData.firstName,
+        last_name: formData.lastName || "N/A", 
+        email: user?.email || "customer@example.com",
+        phone: formData.phone,
+        address: formData.street,
+        city: formData.city,
         country: "Sri Lanka",
       };
 
-      // Hidden Inputs එකතු කිරීම
       Object.entries(dataToPost).forEach(([key, value]) => {
         const input = document.createElement('input');
         input.type = 'hidden';
@@ -90,96 +110,118 @@ const Checkout: React.FC = () => {
       });
 
       document.body.appendChild(form);
-      
-      // Cart එක Clear කිරීම (පේමන්ට් එකට යන්න පෙර)
-      clearCart();
-      
-      form.submit(); // PayHere වෙත Redirect කිරීම
+      clearCart(); // Payment එකට යන්න පෙර Cart එක clear කරන්න
+      form.submit(); 
 
     } catch (error: any) {
       console.error("Payment Error:", error);
-      toast.error(error.response?.data?.message || 'Payment initialization failed');
+      toast.error(error.response?.data?.message || 'Payment initialization failed.');
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8">
-      <h1 className="text-3xl font-bold mb-8 flex items-center gap-2">
-        <ShoppingBag className="text-blue-600" /> Checkout
-      </h1>
+    <div className="max-w-6xl mx-auto p-4 md:p-8 min-h-screen bg-gray-50/50">
+      {/* Header */}
+      <div className="flex items-center gap-4 mb-8">
+        <button onClick={() => navigate(-1)} className="p-2 hover:bg-white rounded-full transition-colors border border-transparent hover:border-gray-200">
+          <ChevronRight className="w-6 h-6 rotate-180 text-gray-600" />
+        </button>
+        <h1 className="text-3xl font-bold flex items-center gap-2 text-gray-800">
+          <ShoppingBag className="text-blue-600 w-8 h-8" /> Checkout
+        </h1>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* වම් පස - Order විස්තර සහ ලිපිනය */}
-        <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-gray-500" /> Shipping Address
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Delivery Form */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100">
+            <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-gray-800 border-b pb-4">
+              <MapPin className="w-5 h-5 text-blue-600" /> Delivery Information
             </h2>
-            <div className="text-gray-600 text-sm">
-              <p className="font-medium text-gray-800">{user?.name}</p>
-              <p>{address.street},</p>
-              <p>{address.city} {address.zipCode}</p>
-              <p>Sri Lanka</p>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-gray-500" /> Payment Method
-            </h2>
-            <div className="flex items-center justify-between p-3 border rounded-xl bg-blue-50 border-blue-200">
-              <span className="text-sm font-medium text-blue-700">PayHere Gateway (LKR)</span>
-              <img src="https://www.payhere.lk/downloads/images/payhere_long_banner.png" alt="PayHere" className="h-6" />
-            </div>
+            <form id="checkout-form" className="grid grid-cols-1 md:grid-cols-2 gap-5" onSubmit={handlePayHereCheckout}>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-600">First Name</label>
+                <input type="text" value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" required />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-600">City</label>
+                <input type="text" value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" required />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-semibold text-gray-600">Street Address</label>
+                <input type="text" value={formData.street} onChange={(e) => setFormData({...formData, street: e.target.value})} className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" required />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-semibold text-gray-600">Phone Number</label>
+                <div className="relative">
+                  <Phone className="absolute left-4 top-4 w-5 h-5 text-gray-400" />
+                  <input type="tel" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full p-3.5 pl-12 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="07XXXXXXXX" required />
+                </div>
+              </div>
+            </form>
           </div>
         </div>
 
-        {/* දකුණු පස - මිල ගණන් විස්තරය */}
-        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 h-fit">
-          <h2 className="text-xl font-bold mb-6">Order Summary</h2>
-          <div className="space-y-4 mb-6">
-            {items.map((item) => (
-              <div key={item.product._id} className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">{item.product.name} × {item.quantity}</span>
-                <span className="font-semibold text-gray-800">Rs. {(item.product.price * item.quantity).toFixed(2)}</span>
+        {/* Order Summary Card */}
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 sticky top-8">
+            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+              <Package className="w-5 h-5 text-blue-600" /> Order Summary
+            </h2>
+            
+            {/* Mini Items List */}
+            <div className="space-y-4 mb-6 max-h-[240px] overflow-y-auto pr-2">
+              {items.map((item) => (
+                <div key={item.product._id} className="flex gap-3 items-center">
+                  <img 
+                    src={(item.product as any).image || (item.product as any).images?.[0] || 'https://via.placeholder.com/50'} 
+                    className="w-12 h-12 rounded-lg object-cover bg-gray-50"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">{item.product.name}</p>
+                    <p className="text-xs text-gray-500">{item.quantity} x Rs. {item.product.price}</p>
+                  </div>
+                  <p className="text-sm font-bold">Rs. {item.product.price * item.quantity}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-3 pt-4 border-t border-gray-100">
+              <div className="flex justify-between text-gray-600 text-sm">
+                <span>Subtotal</span>
+                <span>Rs. {calculateSubtotal().toLocaleString()}</span>
               </div>
-            ))}
-          </div>
+              <div className="flex justify-between text-gray-600 text-sm">
+                <span>Shipping</span>
+                <span className={calculateShipping() === 0 ? "text-green-600 font-bold" : ""}>
+                  {calculateShipping() === 0 ? "Free" : `Rs. ${calculateShipping().toLocaleString()}`}
+                </span>
+              </div>
+              <div className="flex justify-between text-xl font-bold text-gray-800 pt-3 border-t mt-2">
+                <span>Total</span>
+                <span className="text-blue-600">Rs. {calculateTotal().toLocaleString()}</span>
+              </div>
+            </div>
 
-          <div className="border-t pt-4 space-y-2">
-            <div className="flex justify-between text-gray-500">
-              <span>Subtotal</span>
-              <span>Rs. {calculateTotal().toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-gray-500">
-              <span>Shipping</span>
-              <span className="text-green-600 font-medium">Free</span>
-            </div>
-            <div className="flex justify-between text-xl font-bold text-gray-900 pt-2">
-              <span>Total</span>
-              <span>Rs. {calculateTotal().toFixed(2)}</span>
+            <button 
+              form="checkout-form" 
+              type="submit" 
+              disabled={isProcessing || items.length === 0} 
+              className="w-full mt-8 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 rounded-2xl font-bold text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
+            >
+              {isProcessing ? (
+                <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</>
+              ) : (
+                <>Confirm and Pay <ChevronRight className="w-5 h-5" /></>
+              )}
+            </button>
+            
+            <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-gray-400 uppercase tracking-widest font-bold">
+              <Lock className="w-3 h-3" /> Secure Checkout
             </div>
           </div>
-
-          <button 
-            onClick={handlePayHereCheckout} 
-            disabled={isProcessing} 
-            className={`w-full mt-8 py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all shadow-lg ${
-              isProcessing ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700 active:scale-95'
-            }`}
-          >
-            {isProcessing ? 'Processing...' : (
-              <>
-                Confirm and Pay <ChevronRight className="w-5 h-5" />
-              </>
-            )}
-          </button>
-          
-          <p className="text-[10px] text-gray-400 mt-4 text-center uppercase tracking-widest">
-            Secure Payment Powered by PayHere
-          </p>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star, Shield, Truck, RefreshCw } from 'lucide-react';
 import ProductList from '../components/products/ProductList';
-import type { Product } from '../types';
+import type { Product } from '../types/types';
 import { productService } from '../services/productService';
 import Spinner from '../components/ui/Spinner';
 
