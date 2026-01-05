@@ -80,6 +80,9 @@ const Checkout: React.FC = () => {
       const form = document.createElement('form');
       form.method = 'POST';
       form.action = 'https://sandbox.payhere.lk/pay/checkout';
+      // Checkout.tsx තුළ
+      console.log("Final Amount for PayHere:", form);
+      console.log("Order ID for PayHere:", newOrder._id);
 
       const dataToPost = {
         merchant_id: paymentData.merchant_id,
