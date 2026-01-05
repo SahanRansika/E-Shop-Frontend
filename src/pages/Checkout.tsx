@@ -84,26 +84,24 @@ const Checkout: React.FC = () => {
       console.log("Final Amount for PayHere:", form);
       console.log("Order ID for PayHere:", newOrder._id);
 
-      const dataToPost = {
-        merchant_id: paymentData.merchant_id,
-        return_url: `${window.location.origin}/order-success?orderId=${newOrder._id}`,
-        cancel_url: `${window.location.origin}/checkout`,
-        notify_url: "https://55fc2faa80e2.ngrok-free.app/api/payments/notify", 
-        order_id: newOrder._id,
-        items: `Order from ${user?.name || 'Customer'}`,
-        currency: "LKR",
-        // වැදගත්: Backend එකෙන් ලැබුණු formatted amount එකම භාවිතා කරන්න
-        amount: paymentData.amount, 
-        hash: paymentData.hash,     
-        first_name: formData.firstName,
-        last_name: formData.lastName || "N/A", 
-        email: user?.email || "customer@example.com",
-        phone: formData.phone,
-        address: formData.street,
-        city: formData.city,
-        country: "Sri Lanka",
-      };
-
+   const dataToPost = {
+    merchant_id: paymentData.merchant_id,
+    return_url: `${window.location.origin}/order-success?orderId=${newOrder._id}`,
+    cancel_url: `${window.location.origin}/payment-failed`,
+    notify_url: paymentData.notify_url, // Backend එකෙන් එන ngrok URL එකම ගන්න
+    order_id: paymentData.order_id,    // Backend එකෙන් ආපු ID එකම ගන්න
+    items: "E-Shop Order",
+    currency: "LKR",
+    amount: paymentData.amount,       // Backend එකෙන් ලැබුණු 500.00 වැනි අගයම ගන්න
+    hash: paymentData.hash,           // Backend එකෙන් ලැබුණු Hash එක
+    first_name: formData.firstName.split(' ')[0], // මුල් නම පමණක් ගන්න
+    last_name: formData.firstName.split(' ')[1] || "Customer", // දෙවැනි නම ඇත්නම් එය ගන්න
+    email: user?.email || "test-customer@example.com",
+    phone: formData.phone,
+    address: formData.street,
+      city: formData.city,
+    country: "Sri Lanka",
+  };
       Object.entries(dataToPost).forEach(([key, value]) => {
         const input = document.createElement('input');
         input.type = 'hidden';
