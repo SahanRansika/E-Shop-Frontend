@@ -1,29 +1,38 @@
+# 🛒 E-Shop Frontend
+
+A modern e-commerce frontend built using **React + TypeScript + Vite**.  
+This project is deployed on **Vercel** and connects to a backend API for products, cart, and checkout.
+
 ---
 
-### 2. Frontend README (`e-shop-frontend/README.md`)
+## 🚀 Tech Stack
 
-```markdown
-# 🛍️ E-Shop Frontend
+- ⚛️ React 18
+- 🧠 TypeScript
+- ⚡ Vite
+- 🎨 Tailwind CSS
+- 🔄 Axios
+- 🗂 Zustand (State Management)
+- 🌐 React Router DOM
+- ☁️ Deployed on Vercel
 
-The user-facing side of the E-Shop, designed for a seamless shopping experience. Built with React and Tailwind CSS, it features a modern, responsive UI and integrated payment flows.
+---
 
-## 🚀 Technologies Used
-* **React (Vite)** - Frontend library
-* **TypeScript** - Language
-* **Tailwind CSS** - Styling
-* **Zustand** - State management (Cart & Auth)
-* **Lucide React** - Iconography
-* **Axios** - API communication
+## 📦 Features
 
-## ✨ Features
-* **Dynamic Shopping Cart**: Real-time updates with total and shipping calculations.
-* **Secure Checkout**: Integrated with PayHere Sandbox for card payments.
-* **Responsive Design**: Optimized for mobile, tablet, and desktop.
-* **Order Tracking**: Success pages and order summaries.
+- User authentication (login / signup)
+- Product listing & filtering
+- Add to cart & checkout flow
+- Order summary
+- Responsive UI
+- Toast notifications
+- Payment integration (PayHere – Sandbox)
 
-## 📦 Getting Started
+---
 
-### Installation
-1. Navigate to the frontend directory:
-   ```bash
-   cd e-shop-frontend
+## 🛠️ Installation & Setup
+
+### 1️⃣ Clone the repository
+```bash
+git clone https://github.com/SahanRansika/E-Shop-Frontend.git
+cd E-Shop-Frontend
