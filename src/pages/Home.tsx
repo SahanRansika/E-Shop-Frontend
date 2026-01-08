@@ -108,7 +108,7 @@ const Home: React.FC = () => {
                 to="/register"
                 className="inline-flex items-center justify-center px-8 py-4 bg-white/10 backdrop-blur-md border-2 border-white/30 text-white font-bold rounded-full hover:bg-white/20 transition-all duration-200"
               >
-                Become a Seller
+                Become a User
               </Link>
             </div>
           </div>
@@ -202,7 +202,7 @@ const Home: React.FC = () => {
             to="/register"
             className="inline-flex items-center justify-center px-10 py-4 bg-white text-blue-900 font-bold rounded-full hover:bg-blue-50 transition-all transform hover:scale-105 shadow-lg"
           >
-            Register as Seller
+            Register as User
           </Link>
         </div>
       </section>

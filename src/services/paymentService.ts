@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000/api/payment';
+const API_BASE_URL = 'http://localhost:5000/api/payments';
 
 interface InitiatePaymentRequest {
   orderId: string;

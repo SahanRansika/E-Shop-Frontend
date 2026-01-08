@@ -5,15 +5,15 @@ import Spinner from '../ui/Spinner';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'buyer' | 'seller' | 'admin';
+  allowedRoles?: string[]; // Multiple roles check karanna puluwan widihata
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
   const { isAuthenticated, user, isLoading } = useAuthStore();
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex justify-center items-center h-screen">
         <Spinner size="lg" />
       </div>
     );
@@ -23,8 +23,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && user && !user.roles.includes(requiredRole)) {
-    return <Navigate to="/" replace />;
+  // User ge roles array eke allowedRoles thiyenawada balanna
+  if (allowedRoles && user) {
+    const hasPermission = user.roles.some(role => allowedRoles.includes(role));
+    if (!hasPermission) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return <>{children}</>;

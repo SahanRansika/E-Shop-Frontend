@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Package, TrendingUp, Users, DollarSign, 
-  Plus, Edit, Trash2, Loader2, Camera, X
+  Plus, Edit, Trash2, Loader2, Camera, X, LayoutDashboard, AlertCircle
 } from 'lucide-react'; 
 import type { Product } from '../types/types';
 import { productService } from '../services/productService';
@@ -32,21 +33,13 @@ const ProductFormInline: React.FC<{
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
     const data = new FormData();
     data.append('name', formData.name);
     data.append('description', formData.description);
     data.append('price', formData.price.toString());
     data.append('stock', formData.stock.toString());
     data.append('category', formData.category);
-    
-    if (imageFile) {
-      data.append('image', imageFile); // මෙහි නම 'image' විය යුතුමයි
-      console.log("✅ Image attached to FormData:", imageFile.name);
-    } else {
-      console.log("⚠️ No image file to attach");
-    }
-    
+    if (imageFile) data.append('image', imageFile);
     await onSubmit(data);
     setLoading(false);
   };
@@ -65,11 +58,7 @@ const ProductFormInline: React.FC<{
             <span className="text-xs text-gray-500">Upload Product Image</span>
             <input type="file" className="hidden" accept="image/*" onChange={(e) => {
               const file = e.target.files?.[0];
-              if(file) { 
-                setImageFile(file); 
-                setPreview(URL.createObjectURL(file)); 
-                console.log("📸 Image selected:", file.name);
-              }
+              if(file) { setImageFile(file); setPreview(URL.createObjectURL(file)); }
             }} />
           </label>
         )}
@@ -96,6 +85,7 @@ const ProductFormInline: React.FC<{
 
 const Dashboard: React.FC = () => {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -104,15 +94,24 @@ const Dashboard: React.FC = () => {
   const [stats, setStats] = useState({ totalProducts: 0, totalSales: 0, totalRevenue: 0, pendingOrders: 0 });
 
   useEffect(() => {
-    if (user?.id) fetchDashboardData();
-  }, [user?.id]);
+    // Role Verification: Admin ho Seller nethnam eliyata danna
+    if (user) {
+      const hasAccess = user.roles.includes('admin') || user.roles.includes('seller');
+      if (!hasAccess) {
+        toast.error("Unauthorized! Only Sellers and Admins can access Dashboard.");
+        navigate('/');
+        return;
+      }
+      fetchDashboardData();
+    }
+  }, [user, navigate]);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       const allProducts = await productService.getAll();
       const myProducts = allProducts.filter(p =>
-        typeof p.seller === 'string' ? p.seller === user?.id : p.seller._id === user?.id
+        typeof p.seller === 'string' ? p.seller === user?.id : (p.seller as any)._id === user?.id
       );
       setProducts(myProducts);
       
@@ -164,60 +163,83 @@ const Dashboard: React.FC = () => {
     } catch (error) { toast.error('Delete failed'); }
   };
 
-  if (loading) return <div className="flex justify-center items-center h-96"><Loader2 className="animate-spin" size={40}/></div>;
+  if (loading) return <div className="flex justify-center items-center h-96"><Loader2 className="animate-spin text-blue-600" size={40}/></div>;
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Seller Dashboard</h1>
-          <p className="text-gray-500">Managing inventory for {user?.name}</p>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <LayoutDashboard className="text-blue-600" /> 
+            {user?.roles.includes('admin') ? 'Admin Dashboard' : 'Seller Dashboard'}
+          </h1>
+          <p className="text-gray-500">Managing inventory for <span className="font-semibold text-gray-700">{user?.name}</span></p>
         </div>
-        <Button onClick={() => setShowAddModal(true)} icon={Plus}>Add Product</Button>
+        <Button onClick={() => setShowAddModal(true)} icon={Plus} className="shadow-lg shadow-blue-100">Add New Product</Button>
       </div>
 
-      {/* Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-        <StatCard label="Total Products" value={stats.totalProducts} icon={Package} color="text-blue-600" />
-        <StatCard label="Total Sales" value={stats.totalSales} icon={TrendingUp} color="text-green-600" />
-        <StatCard label="Revenue" value={`$${stats.totalRevenue.toFixed(2)}`} icon={DollarSign} color="text-purple-600" />
-        <StatCard label="Pending Orders" value={stats.pendingOrders} icon={Users} color="text-yellow-600" />
+        <StatCard label="My Products" value={stats.totalProducts} icon={Package} color="text-blue-600" bg="bg-blue-50" />
+        <StatCard label="Total Sales" value={stats.totalSales} icon={TrendingUp} color="text-green-600" bg="bg-green-50" />
+        <StatCard label="Revenue" value={`Rs. ${stats.totalRevenue.toLocaleString()}`} icon={DollarSign} color="text-purple-600" bg="bg-purple-50" />
+        <StatCard label="Pending Orders" value={stats.pendingOrders} icon={Users} color="text-yellow-600" bg="bg-yellow-50" />
       </div>
 
-      {/* Product Table */}
-      <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="px-6 py-4 font-semibold text-gray-700">Product</th>
-              <th className="px-6 py-4 font-semibold text-gray-700">Category</th>
-              <th className="px-6 py-4 font-semibold text-gray-700">Price</th>
-              <th className="px-6 py-4 font-semibold text-gray-700">Stock</th>
-              <th className="px-6 py-4 text-right font-semibold text-gray-700">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {products.map((p) => (
-              <tr key={p._id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4 flex items-center gap-3">
-                  <img 
-                    src={p.image || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='9' cy='9' r='2'%3E%3C/circle%3E%3Cpath d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'%3E%3C/path%3E%3C/svg%3E"} 
-                    className="h-12 w-12 rounded-xl object-cover bg-gray-100 border"
-                    alt={p.name}
-                  />
-                  <span className="font-semibold text-gray-800">{p.name}</span>
-                </td>
-                <td className="px-6 py-4"><span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-medium">{p.category}</span></td>
-                <td className="px-6 py-4 font-medium text-gray-900">${p.price.toFixed(2)}</td>
-                <td className="px-6 py-4 text-gray-600">{p.stock} units</td>
-                <td className="px-6 py-4 text-right space-x-1">
-                  <button onClick={() => {setEditingProduct(p); setShowEditModal(true)}} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={18}/></button>
-                  <button onClick={() => handleDeleteProduct(p._id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={18}/></button>
-                </td>
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-50 flex justify-between items-center">
+          <h3 className="font-bold text-gray-800">Product Inventory</h3>
+          <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">{products.length} Products Found</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-gray-50/50">
+              <tr>
+                <th className="px-6 py-4 font-semibold text-gray-600 text-sm">Product Details</th>
+                <th className="px-6 py-4 font-semibold text-gray-600 text-sm">Category</th>
+                <th className="px-6 py-4 font-semibold text-gray-600 text-sm">Price</th>
+                <th className="px-6 py-4 font-semibold text-gray-600 text-sm">Stock</th>
+                <th className="px-6 py-4 text-right font-semibold text-gray-600 text-sm">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {products.map((p) => (
+                <tr key={p._id} className="hover:bg-gray-50/30 transition-colors">
+                  <td className="px-6 py-4 flex items-center gap-4">
+                    <img 
+                      src={p.image || "https://via.placeholder.com/50"} 
+                      className="h-12 w-12 rounded-xl object-cover bg-gray-100 border"
+                      alt={p.name}
+                    />
+                    <div>
+                      <p className="font-bold text-gray-800 text-sm">{p.name}</p>
+                      <p className="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">ID: {p._id.slice(-6)}</p>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-[10px] font-bold uppercase">{p.category}</span>
+                  </td>
+                  <td className="px-6 py-4 font-bold text-gray-900 text-sm">Rs. {p.price.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${p.stock > 10 ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                      <span className="font-medium">{p.stock} units</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right space-x-2">
+                    <button onClick={() => {setEditingProduct(p); setShowEditModal(true)}} className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"><Edit size={18}/></button>
+                    <button onClick={() => handleDeleteProduct(p._id)} className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors"><Trash2 size={18}/></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {products.length === 0 && (
+            <div className="p-20 text-center text-gray-400">
+              <AlertCircle className="mx-auto mb-2 opacity-20" size={48} />
+              <p>No products added yet.</p>
+            </div>
+          )}
+        </div>
       </div>
 
       <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add New Product">
@@ -231,11 +253,15 @@ const Dashboard: React.FC = () => {
   );
 };
 
-const StatCard = ({ label, value, icon: Icon, color }: any) => (
-  <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-    <Icon className={`${color} mb-3`} size={28} />
-    <p className="text-gray-500 text-sm font-medium">{label}</p>
-    <h3 className="text-2xl font-bold text-gray-900">{value}</h3>
+const StatCard = ({ label, value, icon: Icon, color, bg }: any) => (
+  <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-5">
+    <div className={`${bg} ${color} p-4 rounded-2xl`}>
+      <Icon size={24} />
+    </div>
+    <div>
+      <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">{label}</p>
+      <h3 className="text-xl font-black text-gray-900">{value}</h3>
+    </div>
   </div>
 );
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ShoppingCart, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // 1️⃣ Navigate එක සඳහා අවශ්‍යයි
 import type { Product } from '../../types/types';
 import Button from '../ui/Button';
 import { useCartStore } from '../../store/cartStore';
@@ -11,6 +12,7 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const navigate = useNavigate(); // 2️⃣ Navigate function එක initialize කිරීම
   const BACKEND_URL = 'http://localhost:5000';
   const fallbackImage = "https://images.unsplash.com/photo-1560393464-5c69a73c5770?q=80&w=400&auto=format&fit=crop";
   const imageUrl = product.image 
@@ -20,25 +22,27 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addItem } = useCartStore();
   const { isAuthenticated } = useAuthStore();
 
-  const handleAddToCart = async () => {
+  const handleViewDetails = () => {
+    navigate(`/product/${product._id}`); // 3️⃣ Details page එකට යවන function එක
+  };
+
+  const handleAddToCart = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Card එක click වීම වැළැක්වීමට (Event bubbling prevent)
     try {
-      // 1️⃣ Local cart update
       addItem(product, 1);
-      console.log('✅ Added to local cart:', useCartStore.getState().items);
-
-      // 2️⃣ Backend sync if logged in
       if (isAuthenticated) {
-        const res = await cartService.addToCart(product._id, 1);
-        console.log('✅ Added to backend cart:', res);
+        await cartService.addToCart(product._id, 1);
       }
-
     } catch (err) {
       console.error('❌ Failed to add to cart:', err);
     }
   };
 
   return (
-    <div className="group bg-white rounded-3xl border border-gray-100 overflow-hidden hover:shadow-2xl hover:shadow-blue-100 transition-all duration-300 flex flex-col h-full">
+    <div 
+      onClick={handleViewDetails} // 4️⃣ මුළු Card එකම click කළ හැකි කිරීම
+      className="group bg-white rounded-3xl border border-gray-100 overflow-hidden hover:shadow-2xl hover:shadow-blue-100 transition-all duration-300 flex flex-col h-full cursor-pointer"
+    >
       
       {/* Product Image Section */}
       <div className="relative h-64 overflow-hidden bg-gray-50">
@@ -46,16 +50,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           src={imageUrl}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.onerror = null; 
-            target.src = fallbackImage;
-          }}
         />
         
         {/* Hover Actions */}
         <div className="absolute top-4 right-4 flex flex-col gap-2 translate-x-12 group-hover:translate-x-0 transition-transform duration-300">
-          <button className="p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white text-gray-700 transition-colors">
+          <button 
+            onClick={handleViewDetails} // Eye icon එකෙනුත් details වලට යාම
+            className="p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white text-gray-700 transition-colors"
+          >
             <Eye size={20} />
           </button>
         </div>
@@ -81,7 +83,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <div>
             <span className="text-xs text-gray-400 block mb-1 font-medium tracking-wider uppercase">Price</span>
             <span className="text-2xl font-black text-blue-600">
-              ${product.price.toFixed(2)}
+              Rs.{product.price.toFixed(2)}
             </span>
           </div>
           
@@ -90,7 +92,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             size="sm" 
             icon={ShoppingCart} 
             className="rounded-2xl px-4"
-            onClick={handleAddToCart}
+            onClick={handleAddToCart} // Cart එකට ඇඩ් කිරීමේ බොත්තම
           >
             Add
           </Button>

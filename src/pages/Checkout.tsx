@@ -29,7 +29,7 @@ const Checkout: React.FC = () => {
 
   const calculateShipping = () => {
     const subtotal = calculateSubtotal();
-    // රු. 5000 ට වැඩි නම් Free, නැතිනම් රු. 350
+    // Rs. 5000 ta wadi nam Free, natham Rs. 350
     return subtotal > 5000 || subtotal === 0 ? 0 : 350;
   };
 
@@ -49,16 +49,14 @@ const Checkout: React.FC = () => {
 
     try {
       const finalAmount = calculateTotal();
-      // වැදගත්: Backend එකට අංකයක් (Number) ලෙස යවන්න, Backend එක එය .toFixed(2) කරනු ඇත
-      const amountToSend = finalAmount; 
 
-      // 1. Backend Order එක සෑදීම
+      // 1. Backend Order eka sadehima
       const orderResponse = await api.post('/orders', {
         products: items.map(item => ({ 
           product: item.product._id, 
           quantity: item.quantity 
         })),
-        total: amountToSend, 
+        total: finalAmount, 
         address: { 
           street: formData.street, 
           city: formData.city, 
@@ -69,39 +67,36 @@ const Checkout: React.FC = () => {
 
       const newOrder = orderResponse.data;
 
-      // 2. Hash එක ලබා ගැනීම
-      // Backend එකට මුළු මුදල යවා නිවැරදිව format කළ amount සහ hash එක ලබා ගන්න
+      // 2. Hash eka laba ganima
       const paymentData = await paymentService.initiatePayment({
         orderId: newOrder._id, 
-        amount: amountToSend, 
+        amount: finalAmount, 
       });
 
-      // 3. PayHere Form එක සෑදීම
+      // 3. PayHere Form eka sehdima
       const form = document.createElement('form');
       form.method = 'POST';
       form.action = 'https://sandbox.payhere.lk/pay/checkout';
-      // Checkout.tsx තුළ
-      console.log("Final Amount for PayHere:", form);
-      console.log("Order ID for PayHere:", newOrder._id);
 
-   const dataToPost = {
-    merchant_id: paymentData.merchant_id,
-    return_url: `${window.location.origin}/order-success?orderId=${newOrder._id}`,
-    cancel_url: `${window.location.origin}/payment-failed`,
-    notify_url: paymentData.notify_url, // Backend එකෙන් එන ngrok URL එකම ගන්න
-    order_id: paymentData.order_id,    // Backend එකෙන් ආපු ID එකම ගන්න
-    items: "E-Shop Order",
-    currency: "LKR",
-    amount: paymentData.amount,       // Backend එකෙන් ලැබුණු 500.00 වැනි අගයම ගන්න
-    hash: paymentData.hash,           // Backend එකෙන් ලැබුණු Hash එක
-    first_name: formData.firstName.split(' ')[0], // මුල් නම පමණක් ගන්න
-    last_name: formData.firstName.split(' ')[1] || "Customer", // දෙවැනි නම ඇත්නම් එය ගන්න
-    email: user?.email || "test-customer@example.com",
-    phone: formData.phone,
-    address: formData.street,
-      city: formData.city,
-    country: "Sri Lanka",
-  };
+      const dataToPost = {
+        merchant_id: paymentData.merchant_id,
+        return_url: `${window.location.origin}/order-success?orderId=${newOrder._id}`,
+        cancel_url: `${window.location.origin}/payment-failed`,
+        notify_url: paymentData.notify_url, 
+        order_id: paymentData.order_id,
+        items: "E-Shop Order",
+        currency: "LKR",
+        amount: paymentData.amount,
+        hash: paymentData.hash,
+        first_name: formData.firstName.split(' ')[0],
+        last_name: formData.firstName.split(' ')[1] || "User", // Buyer -> User
+        email: user?.email || "",
+        phone: formData.phone,
+        address: formData.street,
+        city: formData.city,
+        country: "Sri Lanka",
+      };
+
       Object.entries(dataToPost).forEach(([key, value]) => {
         const input = document.createElement('input');
         input.type = 'hidden';
@@ -111,7 +106,7 @@ const Checkout: React.FC = () => {
       });
 
       document.body.appendChild(form);
-      clearCart(); // Payment එකට යන්න පෙර Cart එක clear කරන්න
+      clearCart(); 
       form.submit(); 
 
     } catch (error: any) {
@@ -124,7 +119,6 @@ const Checkout: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8 min-h-screen bg-gray-50/50">
-      {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-white rounded-full transition-colors border border-transparent hover:border-gray-200">
           <ChevronRight className="w-6 h-6 rotate-180 text-gray-600" />
@@ -135,7 +129,6 @@ const Checkout: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Delivery Form */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100">
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-gray-800 border-b pb-4">
@@ -143,7 +136,7 @@ const Checkout: React.FC = () => {
             </h2>
             <form id="checkout-form" className="grid grid-cols-1 md:grid-cols-2 gap-5" onSubmit={handlePayHereCheckout}>
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-600">First Name</label>
+                <label className="text-sm font-semibold text-gray-600">Customer Name</label>
                 <input type="text" value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" required />
               </div>
               <div className="space-y-2">
@@ -165,20 +158,19 @@ const Checkout: React.FC = () => {
           </div>
         </div>
 
-        {/* Order Summary Card */}
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 sticky top-8">
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
               <Package className="w-5 h-5 text-blue-600" /> Order Summary
             </h2>
             
-            {/* Mini Items List */}
             <div className="space-y-4 mb-6 max-h-[240px] overflow-y-auto pr-2">
               {items.map((item) => (
                 <div key={item.product._id} className="flex gap-3 items-center">
                   <img 
                     src={(item.product as any).image || (item.product as any).images?.[0] || 'https://via.placeholder.com/50'} 
                     className="w-12 h-12 rounded-lg object-cover bg-gray-50"
+                    alt={item.product.name}
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold truncate">{item.product.name}</p>
@@ -220,7 +212,7 @@ const Checkout: React.FC = () => {
             </button>
             
             <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-gray-400 uppercase tracking-widest font-bold">
-              <Lock className="w-3 h-3" /> Secure Checkout
+              <Lock className="w-3 h-3" /> Secure User Checkout
             </div>
           </div>
         </div>
